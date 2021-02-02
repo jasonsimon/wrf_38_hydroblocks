@@ -1,0 +1,237 @@
+!
+!
+!
+!
+module module_sf_jssflux
+contains
+!
+!-------------------------------------------------------------------
+!
+   subroutine jssflux_single(xtime,sfcwrap, minhfx, minwind, u3d, v3d, t3d, qv3d, p3d, dz8w,                           &
+                     cp, rovcp, xlv, psfc, cpm, xland,                          &
+                     psim, psih, hfx, qfx, lh, tsk, flhc, flqc,                 &
+                     znt, gz1oz0, wspd,                                         &
+                     julian_in, karman, p1000mb,                                &
+                     itimestep,chklowq,                                          &
+                     ids, ide, jds, jde, kds, kde,                              &
+                     ims, ime, jms, jme, kms, kme,                              &
+                     its, ite, jts, jte, kts, kte   )
+!-------------------------------------------------------------------
+      implicit none
+!-------------------------------------------------------------------
+!
+   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
+                                                  ims, ime, jms, jme, kms, kme, &
+                                       its, ite, jts, jte, kts, kte, itimestep        
+!   
+   real, intent(in)      ::         minwind, minhfx, cp, rovcp, xlv, julian_in, karman, p1000mb
+   real, intent(in)      ::         xtime
+   integer, intent(in)      ::      sfcwrap
+!
+   real, dimension( ims:ime, kms:kme, jms:jme )                               , &
+            intent(in)   ::                                                u3d, &
+                                                                           v3d, &
+                                                                           t3d, &
+                                                                          qv3d, &
+                                                                           p3d, &
+                                                                          dz8w
+   real, dimension( ims:ime, jms:jme )                                        , &
+            intent(in)   ::                                               psfc, &
+                                                                         xland, &
+                                                                          flhc, &
+                                                                          flqc 
+!
+   real, dimension( ims:ime, jms:jme )                                        , &
+            intent(inout)::                                                cpm, &
+                                                                           znt, &
+                                                                        gz1oz0, &
+                                                                          wspd, &
+                                                                          psim, &
+                                                                          psih, &
+                                                                           hfx, &
+                                                                           qfx, &
+                                                                            lh, &
+                                                                           tsk,&
+                                                                        chklowq           
+! local vars
+
+   integer, parameter    ::                                       n_max = 1200
+   integer               ::                                 i, j, n, nm, nt, m
+   real, parameter       ::                                           den = 1.
+   real                  ::                         julian_s, julian_e, fc_int, &
+                                                            fm, fh, ch, dtdiff
+   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
+   real, dimension(ids:ide, jds:jde) :: fc_hfx, fc_lh
+   real                       ::                     qfx_interp,hfx_interp ! JP
+   real, dimension( its:ite, jts:jte) ::                                   u2d, &
+                                                                           v2d, &
+                                                                           t2d, &
+                                                                          qv2d, &
+                                                                           p2d, &
+                                                                        dz8w1d, &
+                                                                            za, &
+                                                                           thx, &
+                                                                          thgb
+   logical               ::                                        end_of_file
+!
+!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
+!
+   open(unit=11, file='jsssh_bdy', form='formatted', status='old')
+   !print*,'jssflx_bdy' 
+   !read(11,*) julian_s, julian_e, fc_int
+!
+     end_of_file = .false.
+       read(11,*) fc_hfx
+       !fc_julian(n)=julian_s+(n-1)*fc_int/86400.
+   close(11)
+
+   open(unit=11, file='jsslh_bdy', form='formatted', status='old')
+   !print*,'jssflx_bdy' 
+   !read(11,*) julian_s, julian_e, fc_int
+!
+     end_of_file = .false.
+       read(11,*) fc_lh
+       !fc_julian(n)=julian_s+(n-1)*fc_int/86400.
+   close(11)
+
+   fc_hfx = fc_hfx(:,jde:jds:-1)
+   fc_lh = fc_lh(:,jde:jds:-1)
+
+!
+!-----compute surface moisture and heat fluxes, in the unit of [W m-2]
+!
+
+!-----compute skin temperature
+!
+   do j=jts,jte
+     do i=its,ite
+       u2d(i,j)=u3d(i,1,j)
+       v2d(i,j)=v3d(i,1,j)
+       t2d(i,j)=t3d(i,1,j)
+       qv2d(i,j)=qv3d(i,1,j)
+       p2d(i,j)=p3d(i,1,j)
+       dz8w1d(i,j)=dz8w(i,1,j)
+       za(i,j)=0.5*dz8w1d(i,j)
+     enddo
+   enddo 
+
+    CALL wrf_debug( 100, 'jss before loop' )
+
+   do j=jts, jte
+     do i=its, ite
+
+!
+!-----compute surface moisture flux
+!
+       !lh(i,j)=xlv*qfx(i,j)
+	   lh(i,j) = fc_lh(i,j)
+	   qfx(i,j) = fc_lh(i,j)/xlv
+!
+
+
+!-----compute surface heat flux
+!
+       cpm(i,j)=cp*(1.+0.8*qv2d(i,j))
+!      print*,'i j cpm xland qv2d',i,j,cpm(i,j),xland(i,j), qv2d(i,j)
+!      print*,hfx_interp
+
+		hfx(i,j)=max(fc_hfx(i,j),minhfx) !does removing this work?
+		!hfx(i,j)=fc_hfx(i,j)
+
+     enddo
+   enddo
+
+    CALL wrf_debug( 100, 'jss after loop' )
+!
+   
+   if (itimestep .eq. 1) then
+     psih=0.0
+     psim=0.0
+
+   endif
+     chklowq=1.0 !JP
+
+
+	if (sfcwrap.eq.1) then
+
+	   CALL jss_wrapper_surface(  hfx,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							 	  its, ite, jts, jte, kts, kte      )
+
+
+	   CALL jss_wrapper_surface(  qfx,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							 	  its, ite, jts, jte, kts, kte      )
+
+	  endif
+
+   
+   do j=jts,jte
+     do i=its,ite
+       gz1oz0(i,j)=alog(za(i,j)/znt(i,j))
+       fh=gz1oz0(i,j)-psih(i,j)
+       fm=gz1oz0(i,j)-psim(i,j)
+       ch=karman**2/fh/fm
+       !wspd(i,j)=sqrt(u2d(i,j)**2+v2d(i,j)**2)
+       wspd(i,j)=max(sqrt(u2d(i,j)**2+v2d(i,j)**2),minwind)
+       dtdiff=-hfx(i,j)/den/cpm(i,j)/ch/wspd(i,j)
+       tsk(i,j)=t2d(i,j)-dtdiff
+     enddo
+   enddo
+   
+   end subroutine jssflux_single
+
+SUBROUTINE jss_wrapper_surface( flux,                  &
+								ids,ide, jds,jde, kds,kde,           &
+								ims,ime, jms,jme, kms,kme,           &
+								its,ite, jts,jte, kts,kte           )
+
+!-----------------------------------------------------------------------
+! Begin declarations.
+
+	use module_dm, only: wrf_dm_sum_real !jss
+    USE module_configure, ONLY : grid_config_rec_type, model_config_rec
+
+   IMPLICIT NONE
+
+   INTEGER ,          INTENT(IN   )           :: ids, ide, jds, jde, kds, kde, &
+                                                 ims, ime, jms, jme, kms, kme, &
+                                                 its, ite, jts, jte, kts, kte
+
+   REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::     flux
+
+! LOCAL VARS
+
+   INTEGER :: i, j, k
+   REAL    :: totflux, meanflux, np2d
+
+! End declarations.
+!-----------------------------------------------------------------------
+
+	totflux = 0.0
+
+	DO j = jts, jte
+	DO i = its, ite
+		totflux = totflux + flux(i,j)
+	ENDDO
+	ENDDO
+
+	np2d = float((ide-ids)*(jde-jds))
+
+	totflux = wrf_dm_sum_real( totflux )
+
+	meanflux = totflux / np2d
+
+	DO j = jts, jte
+	DO i = its, ite
+		flux(i,j) = meanflux
+	ENDDO
+	ENDDO
+
+
+END SUBROUTINE jss_wrapper_surface
+
+
+end module module_sf_jssflux
