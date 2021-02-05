@@ -6,6 +6,7 @@
     USE module_state_description, only: p_m23, p_m13, p_m22, p_m33, p_r23, p_r13, p_r12, p_m12, p_m11
     USE module_big_step_utilities_em, only: grid_config_rec_type, param_first_scalar, p_qv, p_qi, p_qc
     USE module_model_constants    
+	use module_sf_jssflux
 
     CONTAINS
 
@@ -3705,7 +3706,7 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                     moist,chem,scalar,tracer,                 &
                                     xkmv,xkhv,xkmh,km_opt,                    & ! xkmh added
                                     fnm, fnp, dn, dnw, rdz, rdzw,             &
-                                    hfx, qfx, ust, ust0, rho,                       &
+                                    hfx, qfx, cd, ust, ust0, rho,                       &
                                     xtime, lh,                                &
 									shread0, shread1,						  &
 									lhread0, lhread1,						  &
@@ -3791,6 +3792,7 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
    REAL , DIMENSION( ims:ime, jms:jme), INTENT(INOUT)            :: hfx,  &
                                                                     qfx, &
 																	lh, &
+																	cd, &
 																	shread0, &
 																	shread1, &
 																	lhread0, &
@@ -3815,11 +3817,11 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 !***************************************************************************
 !MODIFICA VARIABILI PER I FLUSSI
 !
-    REAL :: V0_u,V0_v,tao_xz,tao_yz,ustar,cd0
+    REAL :: V0_u,V0_v,V0,tao_xz,tao_yz,ustar,cd0
     REAL :: xsfc,psi1,vk2,zrough,lnz
     REAL :: heat_flux, moist_flux, heat_flux0
     REAL :: cpm
-    REAL , DIMENSION( ims:ime, jms:jme) :: cd02d
+    !REAL , DIMENSION( ims:ime, jms:jme) :: cd02d
 !
 !FINE MODIFICA VARIABILI PER I FLUSSI
 !***************************************************************************
@@ -3972,8 +3974,7 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 	call jsscd(xtime,config_flags%jss_starthour,config_flags%jss_startday,      &
 				config_flags%jss_startmonth, config_flags%start_year,		   &
 				config_flags%jss_sfcwrap,								   &
-				config_flags%jss_minhfx, config_flags%jss_minwind, &
-				cd02d, cdread0, cdread1, &
+				cd, cdread0, cdread1, &
 				ids, ide, jds, jde, kds, kde,                              &
 				ims, ime, jms, jme, kms, kme,                              &
 				its, ite, jts, jte, kts, kte   )
@@ -3990,17 +3991,19 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                            v_2(i-1,kts,j  )+          &
                            v_2(i-1,kts,j+1))/4)**2))+epsilon
 
+       V0 =     sqrt((((u_2(i  ,kts,j  )+          &
+                           u_2(i+1,kts,j))/2)**2) + &
+                        (((v_2(i  ,kts,j  )+          &
+                           v_2(i,kts,j+1))/2)**2))+epsilon
 
-		!ust0(i,j) = ( ( 0.5*(cd02d(i,j)+cd02d(i-1,j))*V0_u ) + ( 0.5*(cd02d(i,j-1)+cd02d(i,j))*V0_v ) )**0.5
-		ust0(i,j) = sqrt(cd02d(i,j)) * V0_u
+		ust0(i,j) = sqrt(cd(i,j)) * V0
 
 !SNT -- Fix to diffusion 
 !       tao_xz=cd0*V0_u*u_2(i,kts,j)                                                         !old code
 !       ru_tendf(i,kts,j)=ru_tendf(i,kts,j)            &                                     !old code
 !                         -0.25*(mu(i,j)+mu(i-1,j))*tao_xz*(rdzw(i,kts,j)+rdzw(i-1,kts,j))   !old code
 
-       !tao_xz=0.5*(cd02d(i,j)+cd02d(i-1,j))*V0_u*u_2(i,kts,j)*(rho(i,kts,j)+rho(i-1,kts,j))/2.                        !new code
-       tao_xz=cd02d(i,j)*V0_u*u_2(i,kts,j)*(rho(i,kts,j)+rho(i-1,kts,j))/2.                        !new code
+       tao_xz=0.5*(cd(i,j)+cd(i-1,j))*V0_u*u_2(i,kts,j)*(rho(i,kts,j)+rho(i-1,kts,j))/2.                        !new code
        ru_tendf(i,kts,j)=ru_tendf(i,kts,j) +   g*tao_xz/dnw(kts)                            !new code
 !SNT -- End changes
        IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN
@@ -4023,8 +4026,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 !       rv_tendf(i,kts,j)=rv_tendf(i,kts,j)            &                                    !old code
 !                         -0.25*(mu(i,j)+mu(i,j-1))*tao_yz*(rdzw(i,kts,j)+rdzw(i,kts,j-1))  !old code
 
-       !tao_yz=0.5*(cd02d(i,j)+cd02d(i,j-1))*V0_v*v_2(i,kts,j)*(rho(i,kts,j)+rho(i,kts,j-1))/2.                        !new code
-       tao_yz=cd02d(i,j)*V0_v*v_2(i,kts,j)*(rho(i,kts,j)+rho(i,kts,j-1))/2.                        !new code
+       tao_yz=0.5*(cd(i,j)+cd(i,j-1))*V0_v*v_2(i,kts,j)*(rho(i,kts,j)+rho(i,kts,j-1))/2.                        !new code
+       !tao_yz=cd02d(i,j)*V0_v*v_2(i,kts,j)*(rho(i,kts,j)+rho(i,kts,j-1))/2.                        !new code
        rv_tendf(i,kts,j)=rv_tendf(i,kts,j) +   g*tao_yz/dnw(kts)                            !new code
 !SNT -- End changes
        IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN
@@ -4118,7 +4121,6 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 	call jsshfx(xtime,config_flags%jss_starthour,config_flags%jss_startday,      &
 				config_flags%jss_startmonth, config_flags%start_year,		   &
 				config_flags%jss_sfcwrap,								   &
-				config_flags%jss_minhfx, config_flags%jss_minwind,		   &
 				hfx, shread0, shread1,									   &
 				ids, ide, jds, jde, kds, kde,                              &
 				ims, ime, jms, jme, kms, kme,                              &
@@ -4225,7 +4227,6 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 	call jssqfx(xtime,config_flags%jss_starthour,config_flags%jss_startday,      &
 				config_flags%jss_startmonth, config_flags%start_year,		   &
 				config_flags%jss_sfcwrap,								   &
-				config_flags%jss_minhfx, config_flags%jss_minwind, &
 				qfx, lh, lhread0, lhread1, &
 				ids, ide, jds, jde, kds, kde,                              &
 				ims, ime, jms, jme, kms, kme,                              &
@@ -5587,7 +5588,7 @@ END SUBROUTINE phy_bc
                         rdx, rdy, dx, dy, dt, zx, zy,           &
                         rdz, rdzw, dn, dnw, isotropic,          &
                         hfx, qfx, qv, ust, rho,                 &
-						cdread0, cdread1,						&
+						cd,						&
                         ids, ide, jds, jde, kds, kde,           &
                         ims, ime, jms, jme, kms, kme,           &
                         its, ite, jts, jte, kts, kte            )
@@ -5631,8 +5632,8 @@ END SUBROUTINE phy_bc
     REAL, DIMENSION ( ims:ime, jms:jme ), INTENT( IN )   &
     :: hfx, ust, qfx
 
-    REAL, DIMENSION ( ims:ime, jms:jme ), INTENT( INOUT )   &
-    :: cdread0, cdread1
+    REAL, DIMENSION ( ims:ime, jms:jme ), INTENT( IN )   &
+    :: cd
 
     REAL, DIMENSION ( ims:ime, kms:kme, jms:jme ), INTENT ( IN ) &
     :: qv, rho
@@ -5653,7 +5654,7 @@ END SUBROUTINE phy_bc
                        xkmh, xkmv,                            &
 					   xtime,								&
                        rdx, rdy, zx, zy, rdz, rdzw, dnw, dn,  &
-					   cdread0, cdread1,					 &
+					   cd,					 &
                        ids, ide, jds, jde, kds, kde,          &
                        ims, ime, jms, jme, kms, kme,          &
                        its, ite, jts, jte, kts, kte           )
@@ -5988,7 +5989,7 @@ END SUBROUTINE phy_bc
                           xkmh, xkmv,                            &
 						  xtime,								&
                           rdx, rdy, zx, zy, rdz, rdzw, dn, dnw,  &
-						  cdread0, cdread1,						&
+						  cd00,						&
                           ids, ide, jds, jde, kds, kde,          &
                           ims, ime, jms, jme, kms, kme,          &
                           its, ite, jts, jte, kts, kte           )
@@ -6067,8 +6068,8 @@ END SUBROUTINE phy_bc
     REAL, DIMENSION( ims:ime, jms:jme ), INTENT( IN )  &
     :: ust
 
-    REAL, DIMENSION( ims:ime, jms:jme ), INTENT( INOUT )  &
-    :: cdread0, cdread1
+    REAL, DIMENSION( ims:ime, jms:jme ), INTENT( IN )  &
+    :: cd00
 
 
 ! Local variables.
@@ -6256,21 +6257,12 @@ END SUBROUTINE phy_bc
 
   CASE (44) ! ustar computed from surface routine !* crm: 11 added
 
-	call jsscd(xtime,config_flags%jss_starthour,config_flags%jss_startday,      &
-				config_flags%jss_startmonth, config_flags%start_year,		   &
-				config_flags%jss_sfcwrap,								   &
-				config_flags%jss_minhfx, config_flags%jss_minwind, &
-				cd02d, cdread0, cdread1, &
-				ids, ide, jds, jde, kds, kde,                              &
-				ims, ime, jms, jme, kms, kme,                              &
-				its, ite, jts, jte, kts, kte   )
-
     DO j = j_start, j_end
     DO i = i_start, i_end
 
       absU=0.5*sqrt((u(i,k,j)+u(i+1,k,j))**2+(v(i,k,j)+v(i,k,j+1))**2)+epsilon
       !Cd = (ust(i,j)**2)/(absU**2)
-	  Cd = cd02d(i,j)
+	  Cd = cd00(i,j)
       tendency(i,k,j) = tendency(i,k,j) +       &
            mu(i,j)*( (u(i,k,j)+u(i+1,k,j))*0.5* &
                      Cd*absU*(defor13(i,kts+1,j)+defor13(i+1,kts+1,j))*0.5 )
@@ -6356,21 +6348,12 @@ END SUBROUTINE phy_bc
 
   CASE (44) ! ustar computed from surface routine 
 
-	call jsscd(xtime,config_flags%jss_starthour,config_flags%jss_startday,      &
-				config_flags%jss_startmonth, config_flags%start_year,		   &
-				config_flags%jss_sfcwrap,								   &
-				config_flags%jss_minhfx, config_flags%jss_minwind, &
-				cd02d, cdread0, cdread1, &
-				ids, ide, jds, jde, kds, kde,                              &
-				ims, ime, jms, jme, kms, kme,                              &
-				its, ite, jts, jte, kts, kte   )
-
     DO j = j_start, j_end
     DO i = i_start, i_end
 
       absU=0.5*sqrt((u(i,k,j)+u(i+1,k,j))**2+(v(i,k,j)+v(i,k,j+1))**2)+epsilon
       !Cd = (ust(i,j)**2)/(absU**2)
-	  Cd = cd02d(i,j)
+	  Cd = cd00(i,j)
       tendency(i,k,j) = tendency(i,k,j) +       &
            mu(i,j)*( (v(i,k,j)+v(i,k,j+1))*0.5* &
                      Cd*absU*(defor23(i,kts+1,j)+defor23(i,kts+1,j+1))*0.5 )
@@ -7090,860 +7073,6 @@ END SUBROUTINE phy_bc
 !=======================================================================
 !=======================================================================
 
-!
-!-------------------------------------------------------------------
-!
-   subroutine jsscd(xtime,starthour,startday,startmonth,startyear,		&
-					 sfcwrap, minhfx, minwind,                  &
-                     cd, cdread0, cdread1,					                    &
-                     ids, ide, jds, jde, kds, kde,                              &
-                     ims, ime, jms, jme, kms, kme,                              &
-                     its, ite, jts, jte, kts, kte   )
-!-------------------------------------------------------------------
-      implicit none
-!-------------------------------------------------------------------
-!
-   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
-                                                  ims, ime, jms, jme, kms, kme, &
-                                       its, ite, jts, jte, kts, kte
-!   
-   real, intent(in)      ::         minwind, minhfx
-   real, intent(in)      ::         xtime
-   integer, intent(in)      ::      sfcwrap, starthour, startday, startmonth, startyear
-!
- !
-   real, dimension( ims:ime, jms:jme )                                        , &
-            intent(inout)::                                                cd, &
-																	cdread0, &
-																	cdread1
-
-! local vars
-
-   character*256 :: filesh0, filesh1, filelh0, filelh1,fractout
-   character(len=2) :: hr0,hr1,mn0,mn1,dy0,dy1,mo0,mo1
-   character(len=4) :: yr
-   integer, parameter    ::                                       n_max = 1200
-   integer               ::                                 i, j, n, nm, nt, m
-   integer               ::                                 newread, month0, &
-															month1
-   real, parameter       ::                                           den = 1.
-   real :: mn, fract
-   integer :: hr,day
-   real                  ::                         julian_s, julian_e, fc_int, &
-                                                            fm, fh, ch, dtdiff
-   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
-   real, dimension(ids:ide, jds:jde) :: fc_hfx, fc_hfx0, fc_hfx1, fc_lh, fc_lh0, fc_lh1
-   real                       ::                     qfx_interp,hfx_interp ! JP
-   real, dimension( its:ite, jts:jte) ::                                   u2d, &
-                                                                           v2d, &
-                                                                           t2d, &
-                                                                          qv2d, &
-                                                                           p2d, &
-                                                                        dz8w1d, &
-                                                                            za, &
-                                                                           thx, &
-                                                                          thgb
-   logical               ::                                        end_of_file
-!
-!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
-!
-
-
-	hr = int(xtime / 60.0) 
-	mn = xtime - hr*60
-	day = startday
-	month0 = startmonth
-
-	hr = hr + starthour
-	if (hr.ge.24) then
-		hr = hr - 24
-		day = day + 1
-		call jss_monthwrap( startmonth, month0, day )
-	elseif (hr.ge.48) then
-		hr = hr - 48
-		day = day + 2
-		call jss_monthwrap( startmonth, month0, day )
-	endif
-
-	write(yr,'(I4.4)') startyear
-	write(mo0,'(I2.2)') month0
-	write(hr0,'(I2.2)') hr
-	write(dy0,'(I2.2)') day
-
-	if (hr.eq.23) then
-		write(hr1,'(I2.2)') 0
-		write(dy1,'(I2.2)') day + 1
-		call jss_monthwrap( startmonth, month1, day+1 )
-		write(mo1,'(I2.2)') month1
-	else
-		write(hr1,'(I2.2)') hr + 1
-		write(dy1,'(I2.2)') day
-		write(mo1,'(I2.2)') month0
-	endif
-
-
-
-	newread = 0
-	if (mn.eq.0) then
-		newread = 1
-	endif
-
-	!print *, yr,mo,dy0,hr0
-	!print *, yr,mo,dy1,hr1
-	!print *, hr,mn,day
-
-	fract = modulo(xtime,60.0) / 60.0
-
-	if (newread.eq.1) then
-		filesh0 = 'jsscm_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
-		filesh1 = 'jsscm_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
-
-		print *, trim(filesh0)
-		print *, trim(filesh1)
-		!print *, trim(filelh0)
-		!print *, trim(filelh1)
-		!call wrf_debug(100, filesh0)
-		!call wrf_debug(100, filesh1)
-		!call wrf_debug(100, filelh0)
-		!call wrf_debug(100, filelh1)
-
-		open(unit=11, file=filesh0, form='formatted', status='old')
-		read(11,*) fc_hfx0
-		close(11)
-
-		open(unit=11, file=filesh1, form='formatted', status='old')
-		read(11,*) fc_hfx1
-		close(11)
-
-		!open(unit=11, file=filelh0, form='formatted', status='old')
-		!read(11,*) fc_lh0
-		!close(11)
-
-		!open(unit=11, file=filelh1, form='formatted', status='old')
-		!read(11,*) fc_lh1
-		!close(11)
-
-		!print *, 'fract',fract
-
-		fc_hfx0 = fc_hfx0(:,jde:jds:-1)
-		fc_hfx1 = fc_hfx1(:,jde:jds:-1)
-
-
-	endif
-
-	!fc_hfx = fc_hfx0 + (fc_hfx1 - fc_hfx0) * fract
-	!fc_lh = fc_lh0 + (fc_lh1 - fc_lh0) *  fract
-
-
-	!fc_hfx = fc_hfx(:,jde:jds:-1)
-	!fc_lh = fc_lh(:,jde:jds:-1)
-
-!
-   do j=jts, jte
-     do i=its, ite
-
-!
-!-----compute surface moisture flux
-!
-	   !lh(i,j) = fc_lh(i,j)
-	   !qfx(i,j) = fc_lh(i,j)/xlv
-!
-
-
-!-----compute surface heat flux
-!
-		!cd(i,j)=fc_hfx(i,j) 
-
-		if (newread.eq.1) then
-			cd(i,j)=fc_hfx0(i,j)  + (fc_hfx1(i,j) - fc_hfx0(i,j))*fract
-			cdread0(i,j) = fc_hfx0(i,j)
-			cdread1(i,j) = fc_hfx1(i,j)
-		else
-			cd(i,j)=cdread0(i,j)  + (cdread1(i,j) - cdread0(i,j))*fract
-		endif
-
-     enddo
-   enddo
-
-
-	if (sfcwrap.eq.1) then
-
-	   CALL jss_wrapper_surface(  cd,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-
-	  endif
-
-   
-   end subroutine jsscd
-
-
-!
-!-------------------------------------------------------------------
-!
-   subroutine jsshfx(xtime,starthour,startday,startmonth,startyear,			&
-					 sfcwrap, minhfx, minwind,                  &
-                     hfx, shread0, shread1,					                    &
-                     ids, ide, jds, jde, kds, kde,                              &
-                     ims, ime, jms, jme, kms, kme,                              &
-                     its, ite, jts, jte, kts, kte   )
-!-------------------------------------------------------------------
-      implicit none
-!-------------------------------------------------------------------
-!
-   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
-                                                  ims, ime, jms, jme, kms, kme, &
-                                       its, ite, jts, jte, kts, kte
-!   
-   real, intent(in)      ::         minwind, minhfx
-   real, intent(in)      ::         xtime
-   integer, intent(in)      ::      sfcwrap, starthour, startday, startmonth, startyear
-!
- !
-   real, dimension( ims:ime, jms:jme )                                        , &
-            intent(inout)::                                             hfx, &
-																	shread0, &
-																	shread1
-
-! local vars
-
-   character*256 :: filesh0, filesh1, filelh0, filelh1,fractout
-   character(len=2) :: hr0,hr1,mn0,mn1,dy0,dy1,mo0,mo1
-   character(len=4) :: yr
-   integer, parameter    ::                                       n_max = 1200
-   integer               ::                                 i, j, n, nm, nt, m
-   integer               ::                                 newread, month0, &
-															month1
-   real, parameter       ::                                           den = 1.
-   real :: mn, fract
-   integer :: hr, day
-   real                  ::                         julian_s, julian_e, fc_int, &
-                                                            fm, fh, ch, dtdiff
-   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
-   real, dimension(ids:ide, jds:jde) :: fc_hfx, fc_hfx0, fc_hfx1, fc_lh, fc_lh0, fc_lh1
-   real                       ::                     qfx_interp,hfx_interp ! JP
-   real, dimension( its:ite, jts:jte) ::                                   u2d, &
-                                                                           v2d, &
-                                                                           t2d, &
-                                                                          qv2d, &
-                                                                           p2d, &
-                                                                        dz8w1d, &
-                                                                            za, &
-                                                                           thx, &
-                                                                          thgb
-   logical               ::                                        end_of_file
-!
-!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
-!
-
-	hr = int(xtime / 60.0) 
-	mn = xtime - hr*60
-	day = startday
-	month0 = startmonth
-
-	hr = hr + starthour
-	if (hr.ge.24) then
-		hr = hr - 24
-		day = day + 1
-		call jss_monthwrap( startmonth, month0, day )
-	elseif (hr.ge.48) then
-		hr = hr - 48
-		day = day + 2
-		call jss_monthwrap( startmonth, month0, day )
-	endif
-
-	write(yr,'(I4.4)') startyear
-	write(mo0,'(I2.2)') month0
-	write(hr0,'(I2.2)') hr
-	write(dy0,'(I2.2)') day
-
-	if (hr.eq.23) then
-		write(hr1,'(I2.2)') 0
-		write(dy1,'(I2.2)') day + 1
-		call jss_monthwrap( startmonth, month1, day+1 )
-		write(mo1,'(I2.2)') month1
-	else
-		write(hr1,'(I2.2)') hr + 1
-		write(dy1,'(I2.2)') day
-		write(mo1,'(I2.2)') month0
-	endif
-
-
-
-	newread = 0
-	if (mn.eq.0) then
-		newread = 1
-	endif
-
-	!print *, yr,mo,dy0,hr0
-	!print *, yr,mo,dy1,hr1
-	!print *, hr,mn,day
-
-	fract = modulo(xtime,60.0) / 60.0
-
-	if (newread.eq.1) then
-		filesh0 = 'jsssh_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
-		filesh1 = 'jsssh_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
-
-		print *, trim(filesh0)
-		print *, trim(filesh1)
-		!print *, trim(filelh0)
-		!print *, trim(filelh1)
-		!call wrf_debug(100, filesh0)
-		!call wrf_debug(100, filesh1)
-		!call wrf_debug(100, filelh0)
-		!call wrf_debug(100, filelh1)
-
-		open(unit=11, file=filesh0, form='formatted', status='old')
-		read(11,*) fc_hfx0
-		close(11)
-
-		open(unit=11, file=filesh1, form='formatted', status='old')
-		read(11,*) fc_hfx1
-		close(11)
-
-		!open(unit=11, file=filelh0, form='formatted', status='old')
-		!read(11,*) fc_lh0
-		!close(11)
-
-		!open(unit=11, file=filelh1, form='formatted', status='old')
-		!read(11,*) fc_lh1
-		!close(11)
-
-		!print *, 'fract',fract
-
-		fc_hfx0 = fc_hfx0(:,jde:jds:-1)
-		fc_hfx1 = fc_hfx1(:,jde:jds:-1)
-
-
-	endif
-
-	!fc_hfx = fc_hfx0 + (fc_hfx1 - fc_hfx0) * fract
-	!fc_lh = fc_lh0 + (fc_lh1 - fc_lh0) *  fract
-
-
-	!fc_hfx = fc_hfx(:,jde:jds:-1)
-	!fc_lh = fc_lh(:,jde:jds:-1)
-
-!
-   do j=jts, jte
-     do i=its, ite
-
-!
-!-----compute surface moisture flux
-!
-	   !lh(i,j) = fc_lh(i,j)
-	   !qfx(i,j) = fc_lh(i,j)/xlv
-!
-
-
-!-----compute surface heat flux
-!
-		!cd(i,j)=fc_hfx(i,j) 
-
-		if (newread.eq.1) then
-			hfx(i,j)=fc_hfx0(i,j)  + (fc_hfx1(i,j) - fc_hfx0(i,j))*fract
-			shread0(i,j) = fc_hfx0(i,j)
-			shread1(i,j) = fc_hfx1(i,j)
-		else
-			hfx(i,j)=shread0(i,j)  + (shread1(i,j) - shread0(i,j))*fract
-		endif
-
-     enddo
-   enddo
-
-
-	if (sfcwrap.eq.1) then
-
-	   CALL jss_wrapper_surface(  hfx,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-
-	  endif
-
-   
-   end subroutine jsshfx
-
-
-
-
-!
-!-------------------------------------------------------------------
-!
-   subroutine jsshfx_old(xtime,starthour,sfcwrap, minhfx, minwind,                  &
-                     hfx, shread0, shread1,					                    &
-                     ids, ide, jds, jde, kds, kde,                              &
-                     ims, ime, jms, jme, kms, kme,                              &
-                     its, ite, jts, jte, kts, kte   )
-!-------------------------------------------------------------------
-      implicit none
-!-------------------------------------------------------------------
-!
-   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
-                                                  ims, ime, jms, jme, kms, kme, &
-                                       its, ite, jts, jte, kts, kte
-!   
-   real, intent(in)      ::         minwind, minhfx
-   real, intent(in)      ::         xtime
-   integer, intent(in)      ::      sfcwrap, starthour
-!
- !
-   real, dimension( ims:ime, jms:jme )                                        , &
-            intent(inout)::                                             hfx, &
-																	shread0, &
-																	shread1
-
-! local vars
-
-   character*256 :: filesh0, filesh1, filelh0, filelh1,fractout
-   character(len=2) :: hr0,hr1,mn0,mn1
-   integer, parameter    ::                                       n_max = 1200
-   integer               ::                                 i, j, n, nm, nt, m
-   integer               ::                                 newread
-   real, parameter       ::                                           den = 1.
-   real :: mn, fract
-   integer :: hr
-   real                  ::                         julian_s, julian_e, fc_int, &
-                                                            fm, fh, ch, dtdiff
-   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
-   real, dimension(ids:ide, jds:jde) :: fc_hfx, fc_hfx0, fc_hfx1, fc_lh, fc_lh0, fc_lh1
-   real                       ::                     qfx_interp,hfx_interp ! JP
-   real, dimension( its:ite, jts:jte) ::                                   u2d, &
-                                                                           v2d, &
-                                                                           t2d, &
-                                                                          qv2d, &
-                                                                           p2d, &
-                                                                        dz8w1d, &
-                                                                            za, &
-                                                                           thx, &
-                                                                          thgb
-   logical               ::                                        end_of_file
-!
-!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
-!
-
-	hr = int(xtime / 60.0) 
-	mn = xtime - hr*60
-
-	hr = hr + starthour
-	if (hr.ge.24) then
-		hr = hr - 24
-	endif
-
-	if (mn.lt.30) then
-		write(hr0,'(I2.2)') hr
-		write(hr1,'(I2.2)') hr
-		write(mn0,'(I2.2)') 0
-		write(mn1,'(I2.2)') 30
-	else
-		write(hr0,'(I2.2)') hr
-		write(mn0,'(I2.2)') 30
-		write(mn1,'(I2.2)') 0
-
-		if (hr.eq.23) then
-			write(hr1,'(I2.2)') 0
-		else
-			write(hr1,'(I2.2)') hr + 1
-		endif
-
-	endif
-
-	newread = 0
-	if ( (mn.eq.0).or.(mn.eq.30) ) then
-		newread = 1
-	endif
-
-	fract = modulo(xtime,30.0) / 30.0
-
-	if (newread.eq.1) then
-		filesh0 = 'jsssh_bdy_'//trim(hr0)//'_'//trim(mn0)
-		filesh1 = 'jsssh_bdy_'//trim(hr1)//'_'//trim(mn1)
-
-		!print *, trim(filesh0)
-		!print *, trim(filesh1)
-		!print *, trim(filelh0)
-		!print *, trim(filelh1)
-		!call wrf_debug(100, filesh0)
-		!call wrf_debug(100, filesh1)
-		!call wrf_debug(100, filelh0)
-		!call wrf_debug(100, filelh1)
-
-		open(unit=11, file=filesh0, form='formatted', status='old')
-		read(11,*) fc_hfx0
-		close(11)
-
-		open(unit=11, file=filesh1, form='formatted', status='old')
-		read(11,*) fc_hfx1
-		close(11)
-
-		!open(unit=11, file=filelh0, form='formatted', status='old')
-		!read(11,*) fc_lh0
-		!close(11)
-
-		!open(unit=11, file=filelh1, form='formatted', status='old')
-		!read(11,*) fc_lh1
-		!close(11)
-
-		!print *, 'fract',fract
-
-		fc_hfx0 = fc_hfx0(:,jde:jds:-1)
-		fc_hfx1 = fc_hfx1(:,jde:jds:-1)
-
-
-	endif
-
-	!fc_hfx = fc_hfx0 + (fc_hfx1 - fc_hfx0) * fract
-	!fc_lh = fc_lh0 + (fc_lh1 - fc_lh0) *  fract
-
-
-	!fc_hfx = fc_hfx(:,jde:jds:-1)
-	!fc_lh = fc_lh(:,jde:jds:-1)
-
-!
-   do j=jts, jte
-     do i=its, ite
-
-!
-!-----compute surface moisture flux
-!
-	   !lh(i,j) = fc_lh(i,j)
-	   !qfx(i,j) = fc_lh(i,j)/xlv
-!
-
-
-!-----compute surface heat flux
-!
-		!cd(i,j)=fc_hfx(i,j) 
-
-		if (newread.eq.1) then
-			hfx(i,j)=fc_hfx0(i,j)  + (fc_hfx1(i,j) - fc_hfx0(i,j))*fract
-			shread0(i,j) = fc_hfx0(i,j)
-			shread1(i,j) = fc_hfx1(i,j)
-		else
-			hfx(i,j)=shread0(i,j)  + (shread1(i,j) - shread0(i,j))*fract
-		endif
-
-     enddo
-   enddo
-
-
-	if (sfcwrap.eq.1) then
-
-	   CALL jss_wrapper_surface(  hfx,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-
-	  endif
-
-   
-   end subroutine jsshfx_old
-
-
-!
-!-------------------------------------------------------------------
-!
-   subroutine jssqfx(xtime,starthour,startday,startmonth,startyear,			&
-					 sfcwrap, minhfx, minwind,                  &
-                     qfx, lh, lhread0, lhread1,				                    &
-                     ids, ide, jds, jde, kds, kde,                              &
-                     ims, ime, jms, jme, kms, kme,                              &
-                     its, ite, jts, jte, kts, kte   )
-!-------------------------------------------------------------------
-      implicit none
-!-------------------------------------------------------------------
-!
-   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
-                                                  ims, ime, jms, jme, kms, kme, &
-                                       its, ite, jts, jte, kts, kte
-!   
-   real, intent(in)      ::         minwind, minhfx
-   real, intent(in)      ::         xtime
-   integer, intent(in)      ::      sfcwrap, starthour, startday, startmonth, startyear
-!
- !
-   real, dimension( ims:ime, jms:jme )                                        , &
-            intent(inout)::                                                qfx,&
-																			lh,&
-																		lhread0,&
-																		lhread1
-
-! local vars
-
-   character*256 :: filesh0, filesh1, filelh0, filelh1,fractout
-   character(len=2) :: hr0,hr1,mn0,mn1,dy0,dy1,mo0,mo1
-   character(len=4) :: yr
-   integer, parameter    ::                                       n_max = 1200
-   integer               ::                                 i, j, n, nm, nt, m
-   integer               ::                                 newread, month0, &
-														    month1
-   real, parameter       ::                                           den = 1.
-   real :: mn, fract
-   integer :: hr,day
-   real                  ::                         julian_s, julian_e, fc_int, &
-                                                            fm, fh, ch, dtdiff
-   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
-   real, dimension(ids:ide, jds:jde) :: fc_hfx, fc_hfx0, fc_hfx1, fc_lh, fc_lh0, fc_lh1
-   real                       ::                     qfx_interp,hfx_interp ! JP
-   real, dimension( its:ite, jts:jte) ::                                   u2d, &
-                                                                           v2d, &
-                                                                           t2d, &
-                                                                          qv2d, &
-                                                                           p2d, &
-                                                                        dz8w1d, &
-                                                                            za, &
-                                                                           thx, &
-                                                                          thgb
-   logical               ::                                        end_of_file
-!
-!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
-!
-
-
-	hr = int(xtime / 60.0) 
-	mn = xtime - hr*60
-	day = startday
-	month0 = startmonth
-
-	hr = hr + starthour
-	if (hr.ge.24) then
-		hr = hr - 24
-		day = day + 1
-		call jss_monthwrap( startmonth, month0, day )
-	elseif (hr.ge.48) then
-		hr = hr - 48
-		day = day + 2
-		call jss_monthwrap( startmonth, month0, day )
-	endif
-
-	write(yr,'(I4.4)') startyear
-	write(mo0,'(I2.2)') month0
-	write(hr0,'(I2.2)') hr
-	write(dy0,'(I2.2)') day
-
-	if (hr.eq.23) then
-		write(hr1,'(I2.2)') 0
-		write(dy1,'(I2.2)') day + 1
-		call jss_monthwrap( startmonth, month1, day+1 )
-		write(mo1,'(I2.2)') month1
-	else
-		write(hr1,'(I2.2)') hr + 1
-		write(dy1,'(I2.2)') day
-		write(mo1,'(I2.2)') month0
-	endif
-
-	newread = 0
-	if (mn.eq.0) then
-		newread = 1
-	endif
-
-	!print *, yr,mo,dy0,hr0
-	!print *, yr,mo,dy1,hr1
-	!print *, hr,mn,day
-
-	fract = modulo(xtime,60.0) / 60.0
-
-	if (newread.eq.1) then
-		filesh0 = 'jsslh_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
-		filesh1 = 'jsslh_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
-
-
-		print *, trim(filesh0)
-		print *, trim(filesh1)
-		!print *, trim(filelh0)
-		!print *, trim(filelh1)
-		!call wrf_debug(100, filesh0)
-		!call wrf_debug(100, filesh1)
-		!call wrf_debug(100, filelh0)
-		!call wrf_debug(100, filelh1)
-
-		open(unit=11, file=filesh0, form='formatted', status='old')
-		read(11,*) fc_hfx0
-		close(11)
-
-		open(unit=11, file=filesh1, form='formatted', status='old')
-		read(11,*) fc_hfx1
-		close(11)
-
-		!open(unit=11, file=filelh0, form='formatted', status='old')
-		!read(11,*) fc_lh0
-		!close(11)
-
-		!open(unit=11, file=filelh1, form='formatted', status='old')
-		!read(11,*) fc_lh1
-		!close(11)
-
-		!print *, 'fract',fract
-
-		fc_hfx0 = fc_hfx0(:,jde:jds:-1)
-		fc_hfx1 = fc_hfx1(:,jde:jds:-1)
-
-
-	endif
-
-	!fc_hfx = fc_hfx0 + (fc_hfx1 - fc_hfx0) * fract
-	!fc_lh = fc_lh0 + (fc_lh1 - fc_lh0) *  fract
-
-
-	!fc_hfx = fc_hfx(:,jde:jds:-1)
-	!fc_lh = fc_lh(:,jde:jds:-1)
-
-!
-   do j=jts, jte
-     do i=its, ite
-
-!
-!-----compute surface moisture flux
-!
-	   !lh(i,j) = fc_lh(i,j)
-	   !qfx(i,j) = fc_lh(i,j)/xlv
-!
-
-
-!-----compute surface heat flux
-!
-		!cd(i,j)=fc_hfx(i,j) 
-
-		if (newread.eq.1) then
-			lh(i,j)=fc_hfx0(i,j)  + (fc_hfx1(i,j) - fc_hfx0(i,j))*fract
-			lhread0(i,j) = fc_hfx0(i,j)
-			lhread1(i,j) = fc_hfx1(i,j)
-		else
-			lh(i,j)=lhread0(i,j)  + (lhread1(i,j) - lhread0(i,j))*fract
-		endif
-
-		qfx(i,j) = lh(i,j)/xlv
-
-     enddo
-   enddo
-
-
-
-
-	if (sfcwrap.eq.1) then
-
-	   CALL jss_wrapper_surface(  qfx,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-	   CALL jss_wrapper_surface(  lh, 				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-	  endif
-
-   
-   end subroutine jssqfx
-
-
-SUBROUTINE jss_wrapper_surface( flux,                  &
-								ids,ide, jds,jde, kds,kde,           &
-								ims,ime, jms,jme, kms,kme,           &
-								its,ite, jts,jte, kts,kte           )
-
-!-----------------------------------------------------------------------
-! Begin declarations.
-
-	use module_dm, only: wrf_dm_sum_real !jss
-    USE module_configure, ONLY : grid_config_rec_type, model_config_rec
-
-   IMPLICIT NONE
-
-   INTEGER ,          INTENT(IN   )           :: ids, ide, jds, jde, kds, kde, &
-                                                 ims, ime, jms, jme, kms, kme, &
-                                                 its, ite, jts, jte, kts, kte
-
-   REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::     flux
-
-! LOCAL VARS
-
-   INTEGER :: i, j, k
-   REAL    :: totflux, meanflux, np2d
-
-! End declarations.
-!-----------------------------------------------------------------------
-
-	totflux = 0.0
-
-	DO j = jts, jte
-	DO i = its, ite
-		totflux = totflux + flux(i,j)
-	ENDDO
-	ENDDO
-
-	np2d = float((ide-ids)*(jde-jds))
-
-	totflux = wrf_dm_sum_real( totflux )
-
-	meanflux = totflux / np2d
-
-	DO j = jts, jte
-	DO i = its, ite
-		flux(i,j) = meanflux
-	ENDDO
-	ENDDO
-
-
-END SUBROUTINE jss_wrapper_surface
-
-SUBROUTINE jss_monthwrap( mo0,mo1,day )
-
-!-----------------------------------------------------------------------
-! Begin declarations.
-
-   IMPLICIT NONE
-
-   INTEGER ,          INTENT(IN   )           :: mo0,day
-   INTEGER ,          INTENT(INOUT)           :: mo1
-
-
-! LOCAL VARS
-
-   INTEGER :: lastday
-
-! End declarations.
-!-----------------------------------------------------------------------
-
-
-	if (mo0.eq.1) then !jan
-		lastday = 31
-	elseif (mo0.eq.2) then !feb
-		lastday = 28
-	elseif (mo0.eq.3) then !mar
-		lastday = 31
-	elseif (mo0.eq.4) then !apr
-		lastday = 30
-	elseif (mo0.eq.5) then !may
-		lastday = 31
-	elseif (mo0.eq.6) then !jun
-		lastday = 30
-	elseif (mo0.eq.7) then !jul
-		lastday = 31
-	elseif (mo0.eq.8) then !aug
-		lastday = 31
-	elseif (mo0.eq.9) then !sep
-		lastday = 30
-	elseif (mo0.eq.10) then !oct
-		lastday = 31
-	elseif (mo0.eq.11) then !nov
-		lastday = 30
-	elseif (mo0.eq.12) then !dec
-		lastday = 31
-	endif
-
-	mo1 = mo0
-	if (day.gt.lastday) then
-		mo1 = mo0 + 1
-	endif
-
-END SUBROUTINE jss_monthwrap
 
 
 

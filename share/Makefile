@@ -14,7 +14,8 @@ MODULES1=                               \
         module_llxy.o                   \
         module_interp_nmm.o             \
         module_interp_store.o           \
-        module_MPP.o 
+        module_MPP.o \
+		module_sf_jssflux.o
 
 MODULES2=                               \
         module_date_time.o              \

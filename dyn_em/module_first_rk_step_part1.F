@@ -415,6 +415,80 @@ BENCH_START(rad_driver_tim)
 
 BENCH_END(rad_driver_tim)
 
+
+	if ( config_flags%jss_sfcwrap.eq.1 ) then
+
+		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for radiation' )
+
+		CALL jss_wrapper_surface(  config_flags, grid%lwupb,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%lwupbc,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%lwdnb,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%lwdnbc,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%swupb,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%swupbc,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%swdnb,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+		CALL jss_wrapper_surface(  config_flags, grid%swdnbc,				 &
+								  ids, ide, jds, jde, kds, kde,      &
+								  ims, ime, jms, jme, kms, kme,      &
+							!	  ips, ipe, jps, jpe, kps, kpe      )
+							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+							      k_start,min(k_end, kde-1)) 
+
+	endif
+
+
+
+
 !********* Surface driver
 ! surface
 
@@ -841,10 +915,10 @@ BENCH_START(surf_driver_tim)
      &        ,ZOL=grid%ZOL                                                                             &
      &        ,SDA_HFX=grid%SDA_HFX, SDA_QFX=grid%SDA_QFX,HFX_BOTH=grid%HFX_BOTH                        &  !fasdas
      &        ,QFX_BOTH=grid%QFX_BOTH,QNORM=grid%QNORM,fasdas=config_flags%fasdas                       &  !fasdas
-     &        ,jss_hfx=config_flags%jss_hfx_hardval,jss_qfx=config_flags%jss_qfx_hardval,jss_cd0=config_flags%jss_cd0_hardval  & !jss
 	 &		  ,tsread0=grid%tsread0, tsread1=grid%tsread1 &
-     &        ,jss_heatopt=config_flags%jss_heatopt,jss_moistopt=config_flags%jss_moistopt,jss_dragopt=config_flags%jss_dragopt     & !jss
-     &        ,jss_minhfx=config_flags%jss_minhfx,jss_minwind=config_flags%jss_minwind,jss_sfcwrap=config_flags%jss_sfcwrap & !jss
+	 &		  ,alread0=grid%alread0, alread1=grid%alread1 &
+	 &		  ,emread0=grid%emread0, emread1=grid%emread1 &
+	 &		  ,jss_landwrap=config_flags%jss_landwrap &
 	 &		  ,jss_starthour=config_flags%jss_starthour &
 	 &		  ,jss_startday=config_flags%jss_startday &
 	 &		  ,jss_startmonth=config_flags%jss_startmonth &
@@ -932,51 +1006,51 @@ BENCH_END(surf_driver_tim)
      &             ,NUM_TILES=grid%num_tiles                              &
      &              )
 
-	if ( config_flags%jss_sfcwrap.eq.1 ) then
-
-		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for hfx' )
-
-	   CALL jss_wrapper_surface(  config_flags, grid%hfx,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							!	  ips, ipe, jps, jpe, kps, kpe      )
-							      grid%i_start(1),min(grid%i_end(1), ide-1), &
-							      grid%j_start(1),min(grid%j_end(1), jde-1), &
-							      k_start,min(k_end, kde-1)) 
-
-		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for qfx' )
-
-	   CALL jss_wrapper_surface(  config_flags, grid%qfx,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-								  !ips, ipe, jps, jpe, kps, kpe      )
-							      grid%i_start(1),min(grid%i_end(1), ide-1), &
-							      grid%j_start(1),min(grid%j_end(1), jde-1), &
-							      k_start,min(k_end, kde-1)) 
-
-		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for lh' )
-
-	   CALL jss_wrapper_surface(  config_flags, grid%lh,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-								  !ips, ipe, jps, jpe, kps, kpe      )
-							      grid%i_start(1),min(grid%i_end(1), ide-1), &
-							      grid%j_start(1),min(grid%j_end(1), jde-1), &
-							      k_start,min(k_end, kde-1)) 
-
-		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for ust' )
-
-	   CALL jss_wrapper_surface(  config_flags, grid%ust,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-								  !ips, ipe, jps, jpe, kps, kpe      )
-							      grid%i_start(1),min(grid%i_end(1), ide-1), &
-							      grid%j_start(1),min(grid%j_end(1), jde-1), &
-							      k_start,min(k_end, kde-1)) 
-
-		CALL wrf_debug ( 200 , 'out of jss_wrapper_surface for ust' )
-
-	endif
+!	if ( config_flags%jss_sfcwrap.eq.1 ) then
+!
+!		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for hfx' )
+!
+!	   CALL jss_wrapper_surface(  config_flags, grid%hfx,				 &
+!								  ids, ide, jds, jde, kds, kde,      &
+!								  ims, ime, jms, jme, kms, kme,      &
+!							!	  ips, ipe, jps, jpe, kps, kpe      )
+!							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+!							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+!							      k_start,min(k_end, kde-1)) 
+!
+!		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for qfx' )
+!
+!	   CALL jss_wrapper_surface(  config_flags, grid%qfx,				 &
+!								  ids, ide, jds, jde, kds, kde,      &
+!								  ims, ime, jms, jme, kms, kme,      &
+!								  !ips, ipe, jps, jpe, kps, kpe      )
+!							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+!							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+!							      k_start,min(k_end, kde-1)) 
+!
+!		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for lh' )
+!
+!	   CALL jss_wrapper_surface(  config_flags, grid%lh,				 &
+!								  ids, ide, jds, jde, kds, kde,      &
+!								  ims, ime, jms, jme, kms, kme,      &
+!								  !ips, ipe, jps, jpe, kps, kpe      )
+!							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+!							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+!							      k_start,min(k_end, kde-1)) 
+!
+!		CALL wrf_debug ( 200 , 'calling jss_wrapper_surface for ust' )
+!
+!	   CALL jss_wrapper_surface(  config_flags, grid%ust,				 &
+!								  ids, ide, jds, jde, kds, kde,      &
+!								  ims, ime, jms, jme, kms, kme,      &
+!								  !ips, ipe, jps, jpe, kps, kpe      )
+!							      grid%i_start(1),min(grid%i_end(1), ide-1), &
+!							      grid%j_start(1),min(grid%j_end(1), jde-1), &
+!							      k_start,min(k_end, kde-1)) 
+!
+!		CALL wrf_debug ( 200 , 'out of jss_wrapper_surface for ust' )
+!
+!	endif
 
 
 ! * Process aerosol data 
@@ -1667,20 +1741,18 @@ SUBROUTINE jss_wrapper_surface( config_flags, flux,                  &
 
 	totflux = 0.0
 
-	DO j = jts, jte
-	DO i = its, ite
+	DO j = jts, min(jte,jde-1)
+	DO i = its, min(ite,jde-1)
 		totflux = totflux + flux(i,j)
 	ENDDO
 	ENDDO
 
 	np2d = float((ide-ids)*(jde-jds))
-
 	totflux = wrf_dm_sum_real( totflux )
-
 	meanflux = totflux / np2d
 
-	DO j = jts, jte
-	DO i = its, ite
+	DO j = jts, min(jte,jde-1)
+	DO i = its, min(ite,jde-1)
 		flux(i,j) = meanflux
 	ENDDO
 	ENDDO

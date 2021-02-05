@@ -115,7 +115,6 @@ MODULES = \
 	module_sf_noahlsm.o  \
 	module_sf_clm.o  \
         module_sf_ssib.o  \
-	module_sf_jssflux.o  \
 	module_sf_noah_seaice.o \
 	module_sf_noah_seaice_drv.o \
 	module_sf_noahlsm_glacial_only.o \

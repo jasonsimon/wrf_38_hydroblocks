@@ -755,7 +755,7 @@ BENCH_START(tke_rhs_tim)
                          grid%dnw,config_flags%mix_isotropic,         &
                          grid%hfx, grid%qfx, moist(ims,kms,jms,P_QV), &
                          grid%ustm, grid%rho,                         &
-                         grid%cdread0, grid%cdread1,                         &
+                         grid%cd,                         &
                          ids, ide, jds, jde, kds, kde,                &
                          ims, ime, jms, jme, kms, kme,                &
                          grid%i_start(ij), grid%i_end(ij),            &
@@ -795,7 +795,8 @@ BENCH_START(vert_diff_tim)
                                       grid%div, moist, chem, scalar,tracer,         &
                                       grid%xkmv, grid%xkhv, grid%xkmh, config_flags%km_opt,       & ! xkmh added Oct2013
                                       grid%fnm, grid%fnp, grid%dn, grid%dnw, grid%rdz, grid%rdzw, &
-                                      grid%hfx, grid%qfx, grid%ustm, grid%ust, grid%rho,   &
+                                      grid%hfx, grid%qfx, grid%cd, grid%ustm, &
+									  grid%ust, grid%rho,   &
                                       grid%xtime, grid%lh,                       &
                                       grid%shread0, grid%shread1,                &
                                       grid%lhread0, grid%lhread1,                &

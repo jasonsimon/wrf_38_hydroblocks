@@ -29,6 +29,7 @@ MODULE module_initialize_ideal
    USE module_configure
    USE module_init_utilities
    USE module_soil_pre ! added
+   use module_sf_jssflux
 #ifdef DM_PARALLEL
    USE module_dm
 #endif
@@ -136,6 +137,7 @@ CONTAINS
    real, dimension( grid%sd31:grid%ed31, grid%sd33:grid%ed33 )  :: latgrid, longrid
    !real, dimension( 251, 251 )  :: latgrid, longrid
    !real  :: latgridsingle, longridsingle
+   real, dimension( grid%sd31:grid%ed31, grid%sd33:grid%ed33 )  :: tsk
 
    
 
@@ -253,6 +255,20 @@ CONTAINS
                      its, ite, jts, jte, kts, kte   )
 	print *, "post-grid"
 
+	if (config_flags%sf_sfclay_physics.eq.44) then
+		call jssskintemp(0.0,config_flags%jss_starthour,config_flags%jss_startday, &
+						 config_flags%jss_startmonth,config_flags%start_year, &
+						 config_flags%jss_landwrap,  &
+						 grid%tsk, grid%albedo, grid%emiss, &
+						 grid%tsread0, grid%tsread1, &
+						 grid%alread0, grid%alread1, &
+						 grid%emread0, grid%emread1, &
+						 ids, ide, jds, jde, kds, kde,                              &
+						 ims, ime, jms, jme, kms, kme,                              &
+						 its, ite, jts, jte, kts, kte   )
+
+	 endif
+
     DO j = jts, jte
       DO i = its, ite
 
@@ -303,8 +319,10 @@ CONTAINS
          grid%xland(i,j)     = 1.  ! land mask (1 for land, 2 for water), real
          grid%lu_index(i,j)  = 18  ! land use category
 
-         grid%albedo(i,j)   = config_flags%crm_albedo
-         grid%tsk(i,j)      = config_flags%crm_tsk
+		 if (config_flags%sf_sfclay_physics.ne.44) then
+			 grid%tsk(i,j)      = config_flags%crm_tsk
+			 grid%albedo(i,j)   = config_flags%crm_albedo
+		 endif
 
 	 grid%tmn(i,j) = grid%tsk(i,j) - 5  ! soil temperature at lower boundary
 
@@ -1353,76 +1371,6 @@ CONTAINS
    print *, "leaving jssgrid"
    
    end subroutine jssgrid
-
-
-!
-!-------------------------------------------------------------------
-!
-   subroutine jssgridsingle(latgrid,longrid, iwant,jwant, &
-                     ids, ide, jds, jde, kds, kde,                              &
-                     ims, ime, jms, jme, kms, kme,                              &
-                     its, ite, jts, jte, kts, kte   )
-!-------------------------------------------------------------------
-      implicit none
-!-------------------------------------------------------------------
-!
-   integer, intent(in)   ::                       ids, ide, jds, jde, kds, kde, &
-                                                  ims, ime, jms, jme, kms, kme, &
-                                       its, ite, jts, jte, kts, kte, &
-									   iwant, jwant
-!   
- !
-   real, intent(inout)::						latgrid, longrid
-
-! local vars
-
-   character*256 :: filesh0, filesh1, filelh0, filelh1,fractout
-   integer, parameter    ::                                       n_max = 1200
-   integer               ::                                 i, j, n, nm, nt, m
-   integer               ::                                 newread, month0, &
-															month1
-   real, parameter       ::                                           den = 1.
-   real :: mn, fract
-   integer :: hr, day
-   real                  ::                         julian_s, julian_e, fc_int, &
-                                                            fm, fh, ch, dtdiff
-   !real, dimension( 1:n_max ) ::                     fc_qfx, fc_hfx, fc_julian !JP 0 ->1
-   real, dimension(ids:ide, jds:jde) :: fc_latgrid, fc_longrid
-   real, dimension( its:ite, jts:jte) ::                                   u2d, &
-                                                                           v2d, &
-                                                                           t2d, &
-                                                                          qv2d, &
-                                                                           p2d, &
-                                                                        dz8w1d, &
-                                                                            za, &
-                                                                           thx, &
-                                                                          thgb
-   logical               ::                                        end_of_file
-!
-!-----open scmflx_bdy and read the julian_s, julian_e, fc_int
-!
-
-
-
-	filesh0 = 'jsslatgrid'
-	filesh1 = 'jsslongrid'
-
-	open(unit=11, file=filesh0, form='formatted', status='old')
-	read(11,*) fc_latgrid
-	close(11)
-
-	open(unit=11, file=filesh1, form='formatted', status='old')
-	read(11,*) fc_longrid
-	close(11)
-
-	fc_latgrid = fc_latgrid(:,jde:jds:-1)
-	fc_longrid = fc_longrid(:,jde:jds:-1)
-
-	latgrid = fc_latgrid(iwant,jwant)
-	longrid = fc_longrid(iwant,jwant)
-
-   end subroutine jssgridsingle
-
 
 
 

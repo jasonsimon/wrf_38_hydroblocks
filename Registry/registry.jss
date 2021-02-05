@@ -1,22 +1,28 @@
 # jss all of the stuff i've added
 
 
-state    real  shread0              ij      misc        1         -      rh       "shread0"                   "sh in file 0"                      "m s-1"      
-state    real  shread1              ij      misc        1         -      rh       "shread1"                   "sh in file 1"                      "m s-1"      
-state    real  lhread0              ij      misc        1         -      rh       "lhread0"                   "lh in file 0"                      "m s-1"      
-state    real  lhread1              ij      misc        1         -      rh       "lhread1"                   "lh in file 1"                      "m s-1"      
-state    real  tsread0              ij      misc        1         -      rh       "tsread0"                   "ts in file 0"                      "m s-1"      
-state    real  tsread1              ij      misc        1         -      rh       "tsread1"                   "ts in file 1"                      "m s-1"      
-state    real  cdread0              ij      misc        1         -      rh       "cdread0"                   "cd in file 0"                      "m s-1"      
-state    real  cdread1              ij      misc        1         -      rh       "cdread1"                   "cd in file 1"                      "m s-1"      
+state    real  shread0              ij      misc        1         -      rh       "shread0"                   "sh in file 0"                      "W m-2"      
+state    real  shread1              ij      misc        1         -      rh       "shread1"                   "sh in file 1"                      "W m-2"      
+state    real  lhread0              ij      misc        1         -      rh       "lhread0"                   "lh in file 0"                      "W m-2"      
+state    real  lhread1              ij      misc        1         -      rh       "lhread1"                   "lh in file 1"                      "W m-2"      
+state    real  tsread0              ij      misc        1         -      rh       "tsread0"                   "tsk in file 0"                      "K"      
+state    real  tsread1              ij      misc        1         -      rh       "tsread1"                   "tsk in file 1"                      "K"      
+state    real  cdread0              ij      misc        1         -      rh       "cdread0"                   "cd in file 0"                      "-"      
+state    real  cdread1              ij      misc        1         -      rh       "cdread1"                   "cd in file 1"                      "-"      
+state    real  alread0              ij      misc        1         -      rh       "alread0"                   "albedo in file 0"                      "-"      
+state    real  alread1              ij      misc        1         -      rh       "alread1"                   "albedo in file 1"                      "-"      
+state    real  emread0              ij      misc        1         -      rh       "emread0"                   "emissivity in file 0"                      "-"      
+state    real  emread1              ij      misc        1         -      rh       "emread1"                   "emissivity in file 1"                      "-"      
 
 
 rconfig   integer   jss_moistopt       namelist,dynamics     1               0    h    "" ""
 rconfig   integer   jss_heatopt        namelist,dynamics     1               0    h    "" ""
 rconfig   integer   jss_dragopt        namelist,dynamics     1               0    h    "" ""
 
-rconfig   integer   jss_sfcwrap        namelist,dynamics     1               0    h    "" ""
 rconfig   integer   jss_atmwrap        namelist,dynamics     1               0    h    "" ""
+
+rconfig   integer   jss_sfcwrap        namelist,dynamics     1               0    h    "" "wrap cd, hfx and qfx (and lh)"
+rconfig   integer   jss_landwrap       namelist,dynamics     1               0    h    "" "wrap albedo, emiss, and tsk"
 
 rconfig   integer   jss_starthour        namelist,dynamics     1               0    h    "" ""
 rconfig   integer   jss_startday         namelist,dynamics     1               0    h    "" ""

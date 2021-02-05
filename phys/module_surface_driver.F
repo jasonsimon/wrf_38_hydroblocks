@@ -271,10 +271,10 @@ CONTAINS
      &          ,TS_RUL2D_mosaic                                      &  !danli mosaic     
      &          ,ZOL                                                  &  !ckay
      &          ,SDA_HFX, SDA_QFX, HFX_BOTH, QFX_BOTH, QNORM, fasdas  &  !fasdas
-     &          ,jss_hfx, jss_qfx, jss_cd0							  &  !jss
      &          ,tsread0, tsread1							  &  !jss
-	 &			,jss_heatopt, jss_moistopt, jss_dragopt               &  !jss
-	 &			,jss_minhfx, jss_minwind, jss_sfcwrap               &  !jss
+     &          ,alread0, alread1							  &  !jss
+     &          ,emread0, emread1							  &  !jss
+	 &			,jss_landwrap               &  !jss
 	 &			,jss_starthour, jss_startday, jss_startmonth, jss_startyear  &
      &                                                             )
 
@@ -1323,10 +1323,10 @@ CONTAINS
    INTEGER, INTENT(IN   )                              ::   fasdas
 
    !jss
-   INTEGER, INTENT(IN   )                              ::   jss_heatopt, jss_moistopt, jss_dragopt
-   INTEGER, INTENT(IN   )                              ::   jss_sfcwrap, jss_starthour, jss_startday, jss_startmonth, jss_startyear
-   REAL, INTENT(IN   )                              ::   jss_hfx, jss_qfx, jss_cd0, jss_minhfx, jss_minwind
+   INTEGER, INTENT(IN   )                              ::   jss_landwrap, jss_starthour, jss_startday, jss_startmonth, jss_startyear
    REAL, DIMENSION( ims:ime, jms:jme )                 ::   tsread0, tsread1
+   REAL, DIMENSION( ims:ime, jms:jme )                 ::   alread0, alread1
+   REAL, DIMENSION( ims:ime, jms:jme )                 ::   emread0, emread1
 
 ! local vars
    REAL, DIMENSION( ims:ime, jms:jme )                 ::   HFXOLD, QFXOLD
@@ -1807,8 +1807,11 @@ CONTAINS
 
 	 case (hydroblocksles)
 
-         CALL jssskintemp(xtime,jss_starthour,jss_startday,jss_startmonth, jss_startyear,jss_sfcwrap,tsk,                     &
+         CALL jssskintemp(xtime,jss_starthour,jss_startday,jss_startmonth, jss_startyear,jss_landwrap, &
+					 tsk, albedo, emiss, &
 					 tsread0, tsread1, &
+					 alread0, alread1, &
+					 emread0, emread1, &
                      ids, ide, jds, jde, kds, kde,                       &
                      ims, ime, jms, jme, kms, kme,                       &
                      i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
@@ -1829,16 +1832,6 @@ CONTAINS
                      ids, ide, jds, jde, kds, kde,                       &
                      ims, ime, jms, jme, kms, kme,                       &
                      i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
-		 ELSEIF (scm_force_flux .EQ. 2) THEN
-         CALL jssflux_single(scm_force_skintemp,xtime,jss_starthour,jss_sfcwrap, jss_minhfx, jss_minwind, u_phytmp, v_phytmp, t_phy, qv_curr, p_phy, dz8w,   &
-                     cp, rovcp, xlv, psfc, cpm, xland,                   &
-                     psim, psih, hfx, qfx, lh, tsk, flhc, flqc,          &
-                     znt, gz1oz0, wspd,                                  &
-                     julian_in, karman, p1000mb,                         &
-                     itimestep,chklowq,                                  &
-                     ids, ide, jds, jde, kds, kde,                       &
-                     ims, ime, jms, jme, kms, kme,                       &
-                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
          ENDIF
        ENDIF
        IF(PRESENT(SCM_FORCE_SKINTEMP))THEN
@@ -1848,13 +1841,7 @@ CONTAINS
                      ids, ide, jds, jde, kds, kde,                       &
                      ims, ime, jms, jme, kms, kme,                       &
                      i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
-		 ELSEIF (scm_force_skintemp .EQ. 2) THEN
-! surface forcing by observed skin temperature
-         CALL jssskintemp(xtime,jss_starthour,jss_startday,jss_startmonth,jss_startyear,jss_sfcwrap,tsk,tsread0,tsread1,        &
-                     ids, ide, jds, jde, kds, kde,                       &
-                     ims, ime, jms, jme, kms, kme,                       &
-                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
-         ENDIF
+
 !         IF (scm_force_skintemp .EQ. 2) THEN
 ! surface forcing by gabls2 skin temperature
 !         CALL scmgabls2(tsk, itimestep, dt,                              &
@@ -1862,6 +1849,7 @@ CONTAINS
 !                     ims, ime, jms, jme, kms, kme,                       &
 !                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
 !         ENDIF
+		  endif
        ENDIF
        IF (PRESENT(qv_curr)                            .AND.    &
            PRESENT(mol)        .AND.  PRESENT(regime)  .AND.    &
@@ -1907,12 +1895,6 @@ CONTAINS
 !!             ch(i,j) = flhc(i,j)/( cpm(i,j)*rho(i,kts,j) )
            end do
            end do
-		elseif (scm_force_cm .EQ. 1) THEN
-! surface forcing by observed skin temperature
-         CALL jssexcoef(xtime,jss_starthour,jss_sfcwrap,ch,                     &
-                     ids, ide, jds, jde, kds, kde,                       &
-                     ims, ime, jms, jme, kms, kme,                       &
-                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
 		 endif
       
 #endif
@@ -1938,17 +1920,6 @@ CONTAINS
                      ids, ide, jds, jde, kds, kde,                       &
                      ims, ime, jms, jme, kms, kme,                       &
                      i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
-		 ELSEIF (scm_force_flux .EQ. 2) THEN
-! surface forcing by observed fluxes
-         CALL jssflux_single(scm_force_skintemp,xtime,jss_starthour,jss_sfcwrap, jss_minhfx, jss_minwind, u_phytmp, v_phytmp, t_phy, qv_curr, p_phy, dz8w,   &
-                     cp, rovcp, xlv, psfc, cpm, xland,                   &
-                     psim, psih, hfx, qfx, lh, tsk, flhc, flqc,          &
-                     znt, gz1oz0, wspd,                                  &
-                     julian_in, karman, p1000mb,                         &
-                     itimestep,chklowq,                                  &
-                     ids, ide, jds, jde, kds, kde,                       &
-                     ims, ime, jms, jme, kms, kme,                       &
-                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
          ENDIF
        ENDIF
        IF(PRESENT(SCM_FORCE_SKINTEMP))THEN
@@ -1958,12 +1929,7 @@ CONTAINS
                      ids, ide, jds, jde, kds, kde,                       &
                      ims, ime, jms, jme, kms, kme,                       &
                      i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
-		 ELSEIF (scm_force_skintemp .EQ. 2) THEN
-! surface forcing by observed skin temperature
-         CALL jssskintemp(xtime,jss_starthour,jss_startday,jss_startmonth,jss_startyear,jss_sfcwrap,tsk,tsread0,tsread1,    &
-                     ids, ide, jds, jde, kds, kde,                       &
-                     ims, ime, jms, jme, kms, kme,                       &
-                     i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte   )
+
          ENDIF
 !         IF (scm_force_skintemp .EQ. 2) THEN
 ! surface forcing by gabls2 skin temperature

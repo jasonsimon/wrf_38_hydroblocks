@@ -12,6 +12,7 @@ MODULE module_physics_init
 
    USE module_state_description
    USE module_model_constants
+   use module_sf_jssflux
    USE module_configure, ONLY : grid_config_rec_type
 !  USE module_ssib_veg , ONLY : init_module_ssib_veg !fds (SSiB constants)
    !Local data for CAM's MG MP scheme
@@ -61,7 +62,7 @@ CONTAINS
                          levsiz, n_ozmixm, n_aerosolc, paerlev,  &
                          alevsiz, no_src_types,                  &
                          TMN,XLAND,ZNT,Z0,UST,MOL,PBLH,TKE_PBL,  &
-                         EXCH_H,THC,SNOWC,MAVAIL,HFX,QFX,RAINBL, &
+                         EXCH_H,THC,SNOWC,MAVAIL,HFX,QFX,LH,RAINBL, &
                          TSLB,ZS,DZS,num_soil_layers,warm_rain,  &
                          adv_moist_cond,is_CAMMGMP_used,         &
                          APR_GR,APR_W,APR_MC,APR_ST,APR_AS,      &
@@ -223,6 +224,9 @@ CONTAINS
                          ,G_URB2D_mosaic,RN_URB2D_mosaic                                                      & ! danli mosaic 
                          ,TS_URB2D_mosaic                                                                     & ! danli mosaic 
                          ,TS_RUL2D_mosaic                                                                     & ! danli mosaic
+						 ,shread0,shread1,lhread0,lhread1,cdread0,cdread1 & !jss
+						 ,tsread0,tsread1,alread0,alread1,emread0,emread1 & !jss
+						 ,u,v,cd & !jss
                          )
 
 !-----------------------------------------------------------------
@@ -259,7 +263,7 @@ CONTAINS
    REAL,     INTENT(IN)        :: swrad_scat
 
    REAL,     DIMENSION( kms:kme ) , INTENT(IN) :: zfull, zhalf
-   REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(IN) :: TSK, XLAT, XLONG,xlong_u,xlat_v
+   REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(IN) :: XLAT, XLONG,xlong_u,xlat_v
    REAL,  DIMENSION(ims:ime,jms:jme), INTENT(IN) , OPTIONAL :: msftx,msfty
 
    INTEGER,      INTENT(IN   )    ::   levsiz, n_ozmixm
@@ -406,7 +410,7 @@ CONTAINS
              cugd_qvtens,cugd_qcten
    REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::         &
              XLAND,ZNT,Z0,UST,MOL,LU_INDEX,                         &
-             PBLH,THC,MAVAIL,HFX,QFX,RAINBL
+             PBLH,THC,MAVAIL,HFX,QFX,LH,RAINBL
    INTEGER , INTENT(INOUT)  :: landuse_ISICE, landuse_LUCATS
    INTEGER , INTENT(INOUT)  :: landuse_LUSEAS, landuse_ISN
    REAL    , INTENT(INOUT)  , DIMENSION( : ) :: lu_state
@@ -695,6 +699,17 @@ CONTAINS
    REAL,OPTIONAL, DIMENSION( ims:ime , jms:jme ) , &
           INTENT(OUT) ::    wm_temf
 
+
+  !jss
+
+	REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) :: TSK, cd !jss 
+    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT( IN )  &
+    ::  u, v
+
+	REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::    &
+             shread0, shread1, lhread0, lhread1, cdread0, cdread1, &
+			 tsread0, tsread1, alread0, alread1, emread0, emread1
+
 ! Local data
 
    REAL    :: ALBLND,ZZLND,ZZWTR,THINLD,XMAVA,CEN_LAT,pptop
@@ -966,6 +981,58 @@ integer myproc
 
    ENDDO
    ENDDO
+
+   if ( config_flags%sf_sfclay_physics.eq.44) then
+
+		call jsshfx(0.0,config_flags%jss_starthour,config_flags%jss_startday,      &
+				config_flags%jss_startmonth, config_flags%start_year,		   &
+				config_flags%jss_sfcwrap,								   &
+				hfx, shread0, shread1,									   &
+				ids, ide, jds, jde, kds, kde,                              &
+				ims, ime, jms, jme, kms, kme,                              &
+				its, ite, jts, jte, kts, kte   )
+
+		call jssqfx(0.0,config_flags%jss_starthour,config_flags%jss_startday,      &
+				config_flags%jss_startmonth, config_flags%start_year,		   &
+				config_flags%jss_sfcwrap,								   &
+				qfx, lh, lhread0, lhread1, &
+				ids, ide, jds, jde, kds, kde,                              &
+				ims, ime, jms, jme, kms, kme,                              &
+				its, ite, jts, jte, kts, kte   )
+
+		call jssskintemp(0.0,config_flags%jss_starthour, &
+					 config_flags%jss_startday, &
+					 config_flags%jss_startmonth, &
+					 config_flags%start_year, &
+					 config_flags%jss_landwrap, &
+					 tsk, albbck, embck, &
+					 tsread0, tsread1, &
+					 alread0, alread1, &
+					 emread0, emread1, &
+                     ids, ide, jds, jde, kds, kde,                       &
+                     ims, ime, jms, jme, kms, kme,                       &
+                     its, ite, jts, jte, kts, kte   )
+
+		call jsscd(0.0,config_flags%jss_starthour,config_flags%jss_startday,      &
+				config_flags%jss_startmonth, config_flags%start_year,		   &
+				config_flags%jss_sfcwrap,								   &
+				cd, cdread0, cdread1, &
+				ids, ide, jds, jde, kds, kde,                              &
+				ims, ime, jms, jme, kms, kme,                              &
+				its, ite, jts, jte, kts, kte   )
+
+
+		DO j=jts,jtf
+		DO i=its,itf
+			emiss(i,j) = embck(i,j)
+			albedo(i,j) = albbck(i,j)
+
+			ust(i,j) = sqrt(cd(i,j)*((u(i,kts,j)**2) + ((v(i,kts,j)**2))+epsilon))
+		enddo
+		enddo
+			
+
+   endif
 
     if (config_flags%cu_diag == 1 )then
     do j=jts,jtf

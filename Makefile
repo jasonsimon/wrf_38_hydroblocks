@@ -313,19 +313,53 @@ em_b_wave : wrf
 		echo " " ; \
 	fi
 
+#em_les : wrf
+#	@/bin/rm -f ideal.exe > /dev/null 2>&1
+#	@/bin/rm -f wrf.exe   > /dev/null 2>&1
+#	@ echo '--------------------------------------'
+#	( cd main ; $(MAKE) RLFLAGS="$(RLFLAGS)" MODULE_DIRS="$(ALL_MODULES)" SOLVER=em IDEAL_CASE=les em_ideal )
+#	( cd test/em_les ; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
+#	( cd test/em_les ; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
+#	( cd test/em_les ; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
+#	( cd run ; /bin/rm -f ideal.exe ; ln -s ../main/ideal.exe . )
+#	( cd run ; if test -f namelist.input ; then \
+#		/bin/cp -f namelist.input namelist.input.backup ; fi ; \
+#		/bin/rm -f namelist.input ; cp ../test/em_les/namelist.input . )
+#	( cd run ; /bin/rm -f input_sounding ; ln -s ../test/em_les/input_sounding . )
+#	@echo " "
+#	@echo "=========================================================================="
+#	@echo "build started:   $(START_OF_COMPILE)"
+#	@echo "build completed:" `date`
+#	@if test -e main/wrf.exe -a -e main/ideal.exe ; then \
+#		echo " " ; \
+#		echo "--->                  Executables successfully built                  <---" ; \
+#		echo " " ; \
+#		ls -l main/*.exe ; \
+#		echo " " ; \
+#		echo "==========================================================================" ; \
+#		echo " " ; \
+#	else \
+#		echo " " ; \
+#		echo "---> Problems building executables, look for errors in the build log  <---" ; \
+#		echo " " ; \
+#		echo "==========================================================================" ; \
+#		echo " " ; \
+#	fi
+#
+# * jss: doing this so les compiles crm version
 em_les : wrf
 	@/bin/rm -f ideal.exe > /dev/null 2>&1
 	@/bin/rm -f wrf.exe   > /dev/null 2>&1
 	@ echo '--------------------------------------'
-	( cd main ; $(MAKE) RLFLAGS="$(RLFLAGS)" MODULE_DIRS="$(ALL_MODULES)" SOLVER=em IDEAL_CASE=les em_ideal )
-	( cd test/em_les ; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
-	( cd test/em_les ; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
-	( cd test/em_les ; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
+	( cd main ; $(MAKE) MODULE_DIRS="$(ALL_MODULES)" SOLVER=em IDEAL_CASE=crm em_ideal )
+	( cd test/em_crm ; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
+	( cd test/em_crm ; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
+	( cd test/em_crm ; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
 	( cd run ; /bin/rm -f ideal.exe ; ln -s ../main/ideal.exe . )
 	( cd run ; if test -f namelist.input ; then \
 		/bin/cp -f namelist.input namelist.input.backup ; fi ; \
-		/bin/rm -f namelist.input ; cp ../test/em_les/namelist.input . )
-	( cd run ; /bin/rm -f input_sounding ; ln -s ../test/em_les/input_sounding . )
+		/bin/rm -f namelist.input ; cp ../test/em_crm/namelist.input . )
+	( cd run ; /bin/rm -f input_sounding ; ln -s ../test/em_crm/input_sounding . )
 	@echo " "
 	@echo "=========================================================================="
 	@echo "build started:   $(START_OF_COMPILE)"
@@ -345,6 +379,7 @@ em_les : wrf
 		echo "==========================================================================" ; \
 		echo " " ; \
 	fi
+#################################################################
 
 #################################################################
 # * em_crm sendo 

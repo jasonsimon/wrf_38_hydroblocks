@@ -1023,7 +1023,7 @@ endif
                       grid%levsiz, num_ozmixm, num_aerosolc, grid%paerlev,  &
                       grid%alevsiz, grid%no_src_types,                      &
                       grid%tmn,grid%xland,grid%znt,grid%z0,grid%ust,grid%mol,grid%pblh,grid%tke_pbl,    &
-                      grid%exch_h,grid%thc,grid%snowc,grid%mavail,grid%hfx,grid%qfx,grid%rainbl, &
+                      grid%exch_h,grid%thc,grid%snowc,grid%mavail,grid%hfx,grid%qfx,grid%lh,grid%rainbl, &
                       grid%tslb,grid%zs,grid%dzs,config_flags%num_soil_layers,grid%warm_rain,  &
                       grid%adv_moist_cond, grid%is_CAMMGMP_used,                               &
                       grid%apr_gr,grid%apr_w,grid%apr_mc,grid%apr_st,grid%apr_as,      &
@@ -1190,6 +1190,13 @@ endif
                       ,grid%G_URB2D_mosaic,grid%RN_URB2D_mosaic                                      & ! danli mosaic 
                       ,grid%TS_URB2D_mosaic                                                          & ! danli mosaic 
                       ,grid%TS_RUL2D_mosaic                                                          & ! danli mosaic
+					  ,grid%shread0, grid%shread1 & !jss
+					  ,grid%lhread0, grid%lhread1 & !jss
+					  ,grid%cdread0, grid%cdread1 & !jss
+					  ,grid%tsread0, grid%tsread1 & !jss
+					  ,grid%alread0, grid%alread1 & !jss
+					  ,grid%emread0, grid%emread1 & !jss
+					  ,grid%u_2, grid%v_2, grid%cd & !jss
                       )
        ENDDO ! loop of tiles for phy_init
     ENDIF   ! no phy_init for the backwards part of the DFI
