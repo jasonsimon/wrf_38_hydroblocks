@@ -1193,10 +1193,10 @@ endif
 					  ,grid%shread0, grid%shread1 & !jss
 					  ,grid%lhread0, grid%lhread1 & !jss
 					  ,grid%cdread0, grid%cdread1 & !jss
-					  ,grid%tsread0, grid%tsread1 & !jss
+					  ,grid%lwread0, grid%lwread1 & !jss
 					  ,grid%alread0, grid%alread1 & !jss
 					  ,grid%emread0, grid%emread1 & !jss
-					  ,grid%u_2, grid%v_2, grid%cd & !jss
+					  ,grid%u_2, grid%v_2, grid%cd, grid%lwuphb & !jss
                       )
        ENDDO ! loop of tiles for phy_init
     ENDIF   ! no phy_init for the backwards part of the DFI

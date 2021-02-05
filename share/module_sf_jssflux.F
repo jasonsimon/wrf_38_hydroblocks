@@ -819,8 +819,8 @@ contains
 
 
 subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
-					 sfcwrap, tsk, albedo, emiss, &
-					 tsread0, tsread1, &
+					 sfcwrap, tsk, albedo, emiss, lwup, &
+					 lwread0, lwread1, &
 					 alread0, alread1, &
 					 emread0, emread1, &
                      ids, ide, jds, jde, kds, kde,                              &
@@ -842,8 +842,9 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
             intent(inout)::                                                tsk,&
 																		albedo,&
 																		emiss,&
-																		tsread0,&
-																		tsread1,&
+																		lwup,&
+																		lwread0,&
+																		lwread1,&
 																		alread0,&
 																		alread1,&
 																		emread0,&
@@ -851,7 +852,7 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
                                                                            
 ! local vars
 
-   character*256 :: filets0, filets1, fileal0, fileal1, fileem0, fileem1
+   character*256 :: filelw0, filelw1, fileal0, fileal1, fileem0, fileem1
    character(len=2) :: hr0,hr1,mn0,mn1,dy0,dy1,mo0,mo1
    character(len=4) :: yr
    integer               ::                                 i, j, n, nm, nt, m
@@ -859,7 +860,7 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 															month1
    real :: mn, fract
    integer :: hr, day
-   real, dimension(ids:ide, jds:jde) :: fc_tsk0, fc_tsk1
+   real, dimension(ids:ide, jds:jde) :: fc_lw0, fc_lw1
    real, dimension(ids:ide, jds:jde) :: fc_al0, fc_al1
    real, dimension(ids:ide, jds:jde) :: fc_em0, fc_em1
    logical    ::    end_of_file
@@ -911,15 +912,15 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 	fract = modulo(xtime,60.0) / 60.0
 
 	if (newread.eq.1) then
-		filets0 = 'jsstsk_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
-		filets1 = 'jsstsk_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
+		filelw0 = 'jsslw_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
+		filelw1 = 'jsslw_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
 		fileal0 = 'jssal_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
 		fileal1 = 'jssal_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
 		fileem0 = 'jssem_bdy_'//trim(yr)//'-'//trim(mo0)//'-'//trim(dy0)//'-'//trim(hr0)//'-00'
 		fileem1 = 'jssem_bdy_'//trim(yr)//'-'//trim(mo1)//'-'//trim(dy1)//'-'//trim(hr1)//'-00'
 
-		print *, trim(filets0)
-		print *, trim(filets1)
+		print *, trim(filelw0)
+		print *, trim(filelw1)
 		print *, trim(fileal0)
 		print *, trim(fileal1)
 		print *, trim(fileem0)
@@ -931,12 +932,12 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 		!call wrf_debug(100, filelh0)
 		!call wrf_debug(100, filelh1)
 
-		open(unit=11, file=filets0, form='formatted', status='old')
-		read(11,*) fc_tsk0
+		open(unit=11, file=filelw0, form='formatted', status='old')
+		read(11,*) fc_lw0
 		close(11)
 
-		open(unit=11, file=filets1, form='formatted', status='old')
-		read(11,*) fc_tsk1
+		open(unit=11, file=filelw1, form='formatted', status='old')
+		read(11,*) fc_lw1
 		close(11)
 
 		open(unit=11, file=fileal0, form='formatted', status='old')
@@ -955,8 +956,8 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 		read(11,*) fc_em1
 		close(11)
 
-		fc_tsk0 = fc_tsk0(:,jde:jds:-1)
-		fc_tsk1 = fc_tsk1(:,jde:jds:-1)
+		fc_lw0 = fc_lw0(:,jde:jds:-1)
+		fc_lw1 = fc_lw1(:,jde:jds:-1)
 		fc_al0 = fc_al0(:,jde:jds:-1)
 		fc_al1 = fc_al1(:,jde:jds:-1)
 		fc_em0 = fc_em0(:,jde:jds:-1)
@@ -965,13 +966,13 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 
 	endif
 
-   do j=jts, min(jte,jde-1)
-     do i=its, min(ite,ide-1)
+	do j=jts, min(jte,jde-1)
+	 do i=its, min(ite,ide-1)
 
 		if (newread.eq.1) then
-			tsk(i,j)=fc_tsk0(i,j)  + (fc_tsk1(i,j) - fc_tsk0(i,j))*fract
-			tsread0(i,j) = fc_tsk0(i,j)
-			tsread1(i,j) = fc_tsk1(i,j)
+			lwup(i,j)=fc_lw0(i,j)  + (fc_lw1(i,j) - fc_lw0(i,j))*fract
+			lwread0(i,j) = fc_lw0(i,j)
+			lwread1(i,j) = fc_lw1(i,j)
 
 			albedo(i,j)=fc_al0(i,j)  + (fc_al1(i,j) - fc_al0(i,j))*fract
 			alread0(i,j) = fc_al0(i,j)
@@ -981,19 +982,19 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 			emread0(i,j) = fc_em0(i,j)
 			emread1(i,j) = fc_em1(i,j)
 		else
-			tsk(i,j)=tsread0(i,j)  + (tsread1(i,j) - tsread0(i,j))*fract
+			lwup(i,j)=lwread0(i,j)  + (lwread1(i,j) - lwread0(i,j))*fract
 			albedo(i,j)=alread0(i,j)  + (alread1(i,j) - alread0(i,j))*fract
 			emiss(i,j)=emread0(i,j)  + (emread1(i,j) - emread0(i,j))*fract
 		endif
 
-     enddo
-   enddo
+	 enddo
+	enddo
 
 
 
 	if (sfcwrap.eq.1) then
 
-	   CALL jss_wrapper_surface(  tsk,				 &
+	   CALL jss_wrapper_surface(  lwup,			 &
 								  ids, ide, jds, jde, kds, kde,      &
 								  ims, ime, jms, jme, kms, kme,      &
 							 	  its, ite, jts, jte, kts, kte      )
@@ -1008,76 +1009,18 @@ subroutine jssskintemp(xtime,starthour,startday,startmonth,startyear, &
 								  ims, ime, jms, jme, kms, kme,      &
 							 	  its, ite, jts, jte, kts, kte      )
 
-	elseif (sfcwrap.eq.2) then
-
-	   CALL jss_wrapper_longwave( tsk, emiss,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
-	   CALL jss_wrapper_surface(  albedo,				 &
-								  ids, ide, jds, jde, kds, kde,      &
-								  ims, ime, jms, jme, kms, kme,      &
-							 	  its, ite, jts, jte, kts, kte      )
-
 	endif
+
+   do j=jts, min(jte,jde-1)
+     do i=its, min(ite,ide-1)
+
+		tsk(i,j) = (lwup(i,j)/STBOLT/emiss(i,j))**0.25
+
+     enddo
+   enddo
 
    
 end subroutine jssskintemp
-
-
-SUBROUTINE jss_wrapper_longwave( tsk, emiss,            &
-								ids,ide, jds,jde, kds,kde,           &
-								ims,ime, jms,jme, kms,kme,           &
-								its,ite, jts,jte, kts,kte           )
-
-!-----------------------------------------------------------------------
-! Begin declarations.
-
-	use module_dm, only: wrf_dm_sum_real !jss
-    USE module_configure, ONLY : grid_config_rec_type, model_config_rec
-
-   IMPLICIT NONE
-
-   INTEGER ,          INTENT(IN   )           :: ids, ide, jds, jde, kds, kde, &
-                                                 ims, ime, jms, jme, kms, kme, &
-                                                 its, ite, jts, jte, kts, kte
-
-   REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::     tsk, emiss
-
-! LOCAL VARS
-
-   INTEGER :: i, j, k
-   REAL    :: totflux, meanflux, np2d
-
-! End declarations.
-!-----------------------------------------------------------------------
-
-	totflux = 0.0
-
-	DO j = jts, min(jte,jde-1)
-	DO i = its, min(ite,ide-1)
-		totflux = totflux + emiss(i,j)*( tsk(i,j)**4.0 )
-	ENDDO
-	ENDDO
-
-	np2d = float((ide-ids)*(jde-jds))
-	totflux = wrf_dm_sum_real( totflux )
-	meanflux = totflux / np2d
-
-   CALL jss_wrapper_surface(  emiss,				 &
-							  ids, ide, jds, jde, kds, kde,      &
-							  ims, ime, jms, jme, kms, kme,      &
-							  its, ite, jts, jte, kts, kte      )
-
-	DO j = jts, min(jte,jde-1)
-	DO i = its, min(ite,ide-1)
-		tsk(i,j) = (meanflux**0.25)/emiss(i,j)
-	ENDDO
-	ENDDO
-
-END SUBROUTINE jss_wrapper_longwave
-
 
 SUBROUTINE jss_wrapper_surface( flux,                  &
 								ids,ide, jds,jde, kds,kde,           &

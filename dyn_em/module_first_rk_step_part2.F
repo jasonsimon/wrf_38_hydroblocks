@@ -800,7 +800,6 @@ BENCH_START(vert_diff_tim)
                                       grid%xtime, grid%lh,                       &
                                       grid%shread0, grid%shread1,                &
                                       grid%lhread0, grid%lhread1,                &
-                                      grid%tsread0, grid%tsread1,                &
                                       grid%cdread0, grid%cdread1,                &
                                       ids, ide, jds, jde, kds, kde,              &
                                       ims, ime, jms, jme, kms, kme,              &

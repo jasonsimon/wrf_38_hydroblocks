@@ -5,14 +5,16 @@ state    real  shread0              ij      misc        1         -      rh     
 state    real  shread1              ij      misc        1         -      rh       "shread1"                   "sh in file 1"                      "W m-2"      
 state    real  lhread0              ij      misc        1         -      rh       "lhread0"                   "lh in file 0"                      "W m-2"      
 state    real  lhread1              ij      misc        1         -      rh       "lhread1"                   "lh in file 1"                      "W m-2"      
-state    real  tsread0              ij      misc        1         -      rh       "tsread0"                   "tsk in file 0"                      "K"      
-state    real  tsread1              ij      misc        1         -      rh       "tsread1"                   "tsk in file 1"                      "K"      
+state    real  lwread0              ij      misc        1         -      rh       "lwread0"                   "lw up in file 0"                      "W m-2"      
+state    real  lwread1              ij      misc        1         -      rh       "lwread1"                   "lw up in file 1"                      "W m-2"      
 state    real  cdread0              ij      misc        1         -      rh       "cdread0"                   "cd in file 0"                      "-"      
 state    real  cdread1              ij      misc        1         -      rh       "cdread1"                   "cd in file 1"                      "-"      
 state    real  alread0              ij      misc        1         -      rh       "alread0"                   "albedo in file 0"                      "-"      
 state    real  alread1              ij      misc        1         -      rh       "alread1"                   "albedo in file 1"                      "-"      
 state    real  emread0              ij      misc        1         -      rh       "emread0"                   "emissivity in file 0"                      "-"      
 state    real  emread1              ij      misc        1         -      rh       "emread1"                   "emissivity in file 1"                      "-"      
+
+state    real  lwuphb               ij      misc        1         -      rh       "lwuphb"                   "surface LW up in HydroBlocks"                      "-"      
 
 
 rconfig   integer   jss_moistopt       namelist,dynamics     1               0    h    "" ""

@@ -3710,7 +3710,6 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                     xtime, lh,                                &
 									shread0, shread1,						  &
 									lhread0, lhread1,						  &
-									tsread0, tsread1,						  &
 									cdread0, cdread1,						  &
                                     ids, ide, jds, jde, kds, kde,             &
                                     ims, ime, jms, jme, kms, kme,             &
@@ -3797,8 +3796,6 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 																	shread1, &
 																	lhread0, &
 																	lhread1, &
-																	tsread0, &
-																	tsread1, &
 																	cdread0, &
 																	cdread1
    REAL , DIMENSION( ims:ime, jms:jme), INTENT(INOUT)            :: ust, ust0

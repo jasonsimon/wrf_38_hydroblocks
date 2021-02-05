@@ -271,7 +271,8 @@ CONTAINS
      &          ,TS_RUL2D_mosaic                                      &  !danli mosaic     
      &          ,ZOL                                                  &  !ckay
      &          ,SDA_HFX, SDA_QFX, HFX_BOTH, QFX_BOTH, QNORM, fasdas  &  !fasdas
-     &          ,tsread0, tsread1							  &  !jss
+     &          ,lwuphb							  &  !jss
+     &          ,lwread0, lwread1							  &  !jss
      &          ,alread0, alread1							  &  !jss
      &          ,emread0, emread1							  &  !jss
 	 &			,jss_landwrap               &  !jss
@@ -1324,9 +1325,10 @@ CONTAINS
 
    !jss
    INTEGER, INTENT(IN   )                              ::   jss_landwrap, jss_starthour, jss_startday, jss_startmonth, jss_startyear
-   REAL, DIMENSION( ims:ime, jms:jme )                 ::   tsread0, tsread1
-   REAL, DIMENSION( ims:ime, jms:jme )                 ::   alread0, alread1
-   REAL, DIMENSION( ims:ime, jms:jme )                 ::   emread0, emread1
+   REAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)  ::   lwuphb
+   REAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)  ::   lwread0, lwread1
+   REAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)  ::   alread0, alread1
+   REAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)  ::   emread0, emread1
 
 ! local vars
    REAL, DIMENSION( ims:ime, jms:jme )                 ::   HFXOLD, QFXOLD
@@ -1808,8 +1810,8 @@ CONTAINS
 	 case (hydroblocksles)
 
          CALL jssskintemp(xtime,jss_starthour,jss_startday,jss_startmonth, jss_startyear,jss_landwrap, &
-					 tsk, albedo, emiss, &
-					 tsread0, tsread1, &
+					 tsk, albedo, emiss, lwuphb,&
+					 lwread0, lwread1, &
 					 alread0, alread1, &
 					 emread0, emread1, &
                      ids, ide, jds, jde, kds, kde,                       &

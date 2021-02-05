@@ -259,8 +259,8 @@ CONTAINS
 		call jssskintemp(0.0,config_flags%jss_starthour,config_flags%jss_startday, &
 						 config_flags%jss_startmonth,config_flags%start_year, &
 						 config_flags%jss_landwrap,  &
-						 grid%tsk, grid%albedo, grid%emiss, &
-						 grid%tsread0, grid%tsread1, &
+						 grid%tsk, grid%albedo, grid%emiss, grid%lwuphb, &
+						 grid%lwread0, grid%lwread1, &
 						 grid%alread0, grid%alread1, &
 						 grid%emread0, grid%emread1, &
 						 ids, ide, jds, jde, kds, kde,                              &
@@ -319,7 +319,10 @@ CONTAINS
          grid%xland(i,j)     = 1.  ! land mask (1 for land, 2 for water), real
          grid%lu_index(i,j)  = 18  ! land use category
 
-		 if (config_flags%sf_sfclay_physics.ne.44) then
+		 if (config_flags%sf_sfclay_physics.eq.44) then
+			 grid%embck(i,j) = grid%emiss(i,j)
+			 grid%albbck(i,j) = grid%albedo(i,j)
+		 else
 			 grid%tsk(i,j)      = config_flags%crm_tsk
 			 grid%albedo(i,j)   = config_flags%crm_albedo
 		 endif

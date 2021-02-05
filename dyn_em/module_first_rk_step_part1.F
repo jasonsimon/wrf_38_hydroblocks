@@ -915,7 +915,8 @@ BENCH_START(surf_driver_tim)
      &        ,ZOL=grid%ZOL                                                                             &
      &        ,SDA_HFX=grid%SDA_HFX, SDA_QFX=grid%SDA_QFX,HFX_BOTH=grid%HFX_BOTH                        &  !fasdas
      &        ,QFX_BOTH=grid%QFX_BOTH,QNORM=grid%QNORM,fasdas=config_flags%fasdas                       &  !fasdas
-	 &		  ,tsread0=grid%tsread0, tsread1=grid%tsread1 &
+	 &		  ,lwuphb=grid%lwuphb &
+	 &		  ,lwread0=grid%lwread0, lwread1=grid%lwread1 &
 	 &		  ,alread0=grid%alread0, alread1=grid%alread1 &
 	 &		  ,emread0=grid%emread0, emread1=grid%emread1 &
 	 &		  ,jss_landwrap=config_flags%jss_landwrap &

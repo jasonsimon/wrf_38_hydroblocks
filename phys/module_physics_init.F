@@ -225,8 +225,8 @@ CONTAINS
                          ,TS_URB2D_mosaic                                                                     & ! danli mosaic 
                          ,TS_RUL2D_mosaic                                                                     & ! danli mosaic
 						 ,shread0,shread1,lhread0,lhread1,cdread0,cdread1 & !jss
-						 ,tsread0,tsread1,alread0,alread1,emread0,emread1 & !jss
-						 ,u,v,cd & !jss
+						 ,lwread0,lwread1,alread0,alread1,emread0,emread1 & !jss
+						 ,u,v,cd,lwuphb & !jss
                          )
 
 !-----------------------------------------------------------------
@@ -702,13 +702,13 @@ CONTAINS
 
   !jss
 
-	REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) :: TSK, cd !jss 
+	REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) :: TSK, cd, lwuphb !jss 
     REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT( IN )  &
     ::  u, v
 
 	REAL,     DIMENSION( ims:ime , jms:jme ) , INTENT(INOUT) ::    &
              shread0, shread1, lhread0, lhread1, cdread0, cdread1, &
-			 tsread0, tsread1, alread0, alread1, emread0, emread1
+			 lwread0, lwread1, alread0, alread1, emread0, emread1
 
 ! Local data
 
@@ -1005,8 +1005,8 @@ integer myproc
 					 config_flags%jss_startmonth, &
 					 config_flags%start_year, &
 					 config_flags%jss_landwrap, &
-					 tsk, albbck, embck, &
-					 tsread0, tsread1, &
+					 tsk, albbck, embck, lwuphb, &
+					 lwread0, lwread1, &
 					 alread0, alread1, &
 					 emread0, emread1, &
                      ids, ide, jds, jde, kds, kde,                       &
@@ -1024,10 +1024,12 @@ integer myproc
 
 		DO j=jts,jtf
 		DO i=its,itf
+
 			emiss(i,j) = embck(i,j)
 			albedo(i,j) = albbck(i,j)
 
 			ust(i,j) = sqrt(cd(i,j)*((u(i,kts,j)**2) + ((v(i,kts,j)**2))+epsilon))
+
 		enddo
 		enddo
 			
